@@ -108,11 +108,14 @@ def get_race_results(
         ValueError: If neither url nor event_id is provided
 
     Examples:
-        >>> # Fetch by direct URL
-        >>> df = get_race_results(url="https://ismf-ski.com/results/...")
+        >>> # Fetch by direct URL - ISMF results page
+        >>> df = get_race_results(url="https://ismf-ski.com/results/")
 
-        >>> # Fetch by event ID
-        >>> df = get_race_results(event_id="wc-2024-sprint", year=2024)
+        >>> # Fetch by direct URL - DataSkimo specific race
+        >>> df = get_race_results(url="https://dataskimo.org/result.php?race=884&id=742")
+
+        >>> # Fetch by direct URL - DataSkimo homepage with latest results
+        >>> df = get_race_results(url="https://dataskimo.org/")
     """
     if client is None:
         client = get_default_client()
@@ -212,29 +215,27 @@ def _fetch_results_by_event(
 def _build_result_urls(
     event_id: str,
     race_id: str | None,
-    year: int | None,
+    year: int | None,  # noqa: ARG001 - kept for API compatibility
     source: str,
 ) -> list[str]:
     """Build list of URLs to try for fetching results."""
     urls: list[str] = []
 
-    year_str = str(year) if year else ""
-    race_suffix = f"/{race_id}" if race_id else ""
-
     if source in ("ismf", "auto"):
         ismf_paths = [
-            f"/results/{year_str}/{event_id}{race_suffix}",
-            f"/events/{event_id}/results{race_suffix}",
-            f"/race-results/{event_id}",
+            "/results/",
         ]
         urls.extend(urljoin(ISMF_BASE_URL, p) for p in ismf_paths)
 
     if source in ("dataskimo", "auto"):
-        dataskimo_paths = [
-            f"/results/{year_str}/{event_id}",
-            f"/race/{event_id}/results",
-            f"/event/{event_id}",
-        ]
+        if race_id:
+            dataskimo_paths = [
+                f"/result.php?race={event_id}&id={race_id}",
+            ]
+        else:
+            dataskimo_paths = [
+                "/index.php",
+            ]
         urls.extend(urljoin(DATASKIMO_BASE_URL, p) for p in dataskimo_paths)
 
     return urls
@@ -313,27 +314,24 @@ def get_season_calendar(
 
 def _build_calendar_urls(
     season: str | None,
-    competition_type: str | None,
+    competition_type: str | None,  # noqa: ARG001 - kept for API compatibility
     source: str,
 ) -> list[str]:
     """Build URLs for fetching calendar."""
     urls: list[str] = []
 
-    season_path = f"/{season}" if season else ""
-    type_param = f"?type={competition_type}" if competition_type else ""
-
     if source in ("ismf", "auto"):
         ismf_paths = [
-            f"/calendar{season_path}{type_param}",
-            f"/events{season_path}",
-            f"/races{season_path}",
+            "/events-results/calendar",
+            "/events-results/",
         ]
         urls.extend(urljoin(ISMF_BASE_URL, p) for p in ismf_paths)
 
     if source in ("dataskimo", "auto"):
+        season_param = f"?season={season}" if season else ""
         dataskimo_paths = [
-            f"/calendar{season_path}",
-            f"/events{season_path}",
+            f"/calendar.php{season_param}",
+            "/index.php",
         ]
         urls.extend(urljoin(DATASKIMO_BASE_URL, p) for p in dataskimo_paths)
 
@@ -361,28 +359,27 @@ def get_event_details(
         Event object or None if not found
 
     Examples:
-        >>> event = get_event_details("world-cup-andorra-2024")
+        >>> event = get_event_details("ismf-villars-sur-ollon-world-cup")
     """
     if client is None:
         client = get_default_client()
 
-    year_str = str(year) if year else ""
+    # year is kept for API compatibility but not currently used
+    _ = year
 
     urls: list[str] = []
 
     if source in ("ismf", "auto"):
         urls.extend(
             [
-                urljoin(ISMF_BASE_URL, f"/event/{event_id}"),
-                urljoin(ISMF_BASE_URL, f"/events/{year_str}/{event_id}"),
+                urljoin(ISMF_BASE_URL, f"/events/{event_id}/"),
             ]
         )
 
     if source in ("dataskimo", "auto"):
         urls.extend(
             [
-                urljoin(DATASKIMO_BASE_URL, f"/event/{event_id}"),
-                urljoin(DATASKIMO_BASE_URL, f"/race/{event_id}"),
+                urljoin(DATASKIMO_BASE_URL, f"/calendarEvent.php?id={event_id}"),
             ]
         )
 
