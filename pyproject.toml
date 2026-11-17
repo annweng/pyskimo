@@ -42,15 +42,15 @@ dev = [
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
     "mypy>=1.6.0",
-    "pandas-stubs>=2.0.0",
-    "types-beautifulsoup4>=4.12.0",
+    "pandas-stubs",
+    "types-beautifulsoup4",
 ]
 
 [project.urls]
-Homepage = "https://github.com/pyskimo/pyskimo"
-Documentation = "https://github.com/pyskimo/pyskimo#readme"
-Repository = "https://github.com/pyskimo/pyskimo"
-Issues = "https://github.com/pyskimo/pyskimo/issues"
+Homepage = "https://github.com/annweng/pyskimo"
+Documentation = "https://github.com/annweng/pyskimo#readme"
+Repository = "https://github.com/annweng/pyskimo"
+Issues = "https://github.com/annweng/pyskimo/issues"
 
 [tool.hatch.build.targets.sdist]
 include = [
