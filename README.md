@@ -2,7 +2,8 @@
 
 A Python package for fetching, parsing, and analyzing Ski Mountaineering (Skimo) race results.
 
-[![CI](https://github.com/pyskimo/pyskimo/actions/workflows/ci.yml/badge.svg)](https://github.com/pyskimo/pyskimo/actions/workflows/ci.yml)
+[![CI](https://github.com/annweng/pyskimo/actions/workflows/ci.yml/badge.svg)](https://github.com/annweng/pyskimo/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/pyskimo.svg)](https://pypi.org/project/pyskimo/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -24,38 +25,57 @@ A Python package for fetching, parsing, and analyzing Ski Mountaineering (Skimo)
 ## Installation
 
 ```bash
-# Install from source
-git clone https://github.com/pyskimo/pyskimo.git
+pip install pyskimo
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/annweng/pyskimo.git
 cd pyskimo
 pip install -e .
 
-# Or with development dependencies
+# With development dependencies
 pip install -e ".[dev]"
 ```
 
 ## Quick Start
 
+The most reliable way to fetch results is with a **direct URL**:
+
 ```python
 import pyskimo
 
-# Fetch race results by direct URL
+# DataSkimo race results (server-rendered HTML — best source for parsing)
 df = pyskimo.get_race_results(
-    url="https://ismf-ski.com/results/2024/world-cup-sprint"
+    url="https://dataskimo.org/result.php?race=884&id=742"
 )
 
-# Fetch results by event ID
-df = pyskimo.get_race_results(
-    event_id="wc-andorra-2024",
-    race_id="sprint-men",
-    race_format="sprint"
-)
+# DataSkimo homepage (latest results)
+df = pyskimo.get_race_results(url="https://dataskimo.org/")
 
-# Get season calendar
-calendar = pyskimo.get_season_calendar(season="2023-2024")
+# ISMF results hub
+df = pyskimo.get_race_results(url="https://ismf-ski.com/results/")
 
-# Search for athlete results
+# Season calendar (ISMF)
+calendar = pyskimo.get_season_calendar(source="ismf")
+
+# Search for an athlete
 athlete_results = pyskimo.search_athlete("Kilian Jornet", nationality="ESP")
 ```
+
+### Useful site URLs
+
+| What | URL |
+|------|-----|
+| ISMF results | https://ismf-ski.com/results/ |
+| ISMF calendar | https://ismf-ski.com/events-results/calendar |
+| ISMF athletes | https://ismf-ski.com/community/athletes/ |
+| ISMF event page | https://ismf-ski.com/events/{slug}/ |
+| DataSkimo home | https://dataskimo.org/ |
+| DataSkimo race | https://dataskimo.org/result.php?race={race}&id={id} |
+
+> **Note:** Parts of the ISMF site are JavaScript-rendered. For those pages, prefer a direct DataSkimo result URL or an ISMF PDF result sheet. Pass the PDF URL to `get_race_results(url=...)` and the PDF parser will handle it.
 
 ## DataFrame Output
 
@@ -114,12 +134,16 @@ The International Ski Mountaineering Federation official results portal. Contain
 - World Championship results
 - Continental Championships
 
+Key pages: `/results/`, `/events-results/calendar`, `/community/athletes/`, `/events/{slug}/`
+
 ### DataSkimo (dataskimo.org)
 
 Community-maintained database with broader coverage including:
 - National championships
 - Regional races
 - Historical results
+
+Key pages: `/`, `/result.php?race=...&id=...`, `/calendar.php`
 
 ## Supported Race Formats
 
@@ -142,7 +166,7 @@ Fetch race results as a DataFrame.
 
 ```python
 get_race_results(
-    url: str | None = None,           # Direct URL to results
+    url: str | None = None,           # Direct URL to results (preferred)
     event_id: str | None = None,      # Event identifier
     race_id: str | None = None,       # Race within event
     year: int | None = None,          # Year of event
@@ -161,8 +185,20 @@ get_season_calendar(
     season: str | None = None,        # e.g., "2023-2024"
     year: int | None = None,          # Starting year
     competition_type: str | None = None,
-    source: str = "auto",
+    source: str = "auto",             # Prefer "ismf" for official calendar
 ) -> pd.DataFrame
+```
+
+#### `get_event_details()`
+
+Fetch details for a specific event.
+
+```python
+get_event_details(
+    event_id: str,                    # e.g., "ismf-villars-sur-ollon-world-cup"
+    year: int | None = None,
+    source: str = "auto",
+) -> Event | None
 ```
 
 #### `search_athlete()`
@@ -191,8 +227,7 @@ search_athlete(
 ### Setup
 
 ```bash
-# Clone and install
-git clone https://github.com/pyskimo/pyskimo.git
+git clone https://github.com/annweng/pyskimo.git
 cd pyskimo
 pip install -e ".[dev]"
 ```

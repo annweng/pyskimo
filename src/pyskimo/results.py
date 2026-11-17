@@ -33,7 +33,7 @@ DATASKIMO_BASE_URL = "https://dataskimo.org"
 def _results_to_dataframe(results: list[RaceResult]) -> pd.DataFrame:
     """Convert list of RaceResult objects to a pandas DataFrame."""
     if not results:
-        return pd.DataFrame()  # type: ignore[no-any-return]
+        return pd.DataFrame()  # type: ignore[no-any-return, unused-ignore]
 
     records = [r.to_flat_dict() for r in results]
     df: pd.DataFrame = pd.DataFrame(records)
@@ -209,7 +209,7 @@ def _fetch_results_by_event(
             continue
 
     logger.warning(f"No results found for event_id={event_id}, race_id={race_id}, year={year}")
-    return pd.DataFrame()  # type: ignore[no-any-return]
+    return pd.DataFrame()  # type: ignore[no-any-return, unused-ignore]
 
 
 def _build_result_urls(
@@ -292,7 +292,7 @@ def get_season_calendar(
             continue
 
     if not events:
-        return pd.DataFrame()  # type: ignore[no-any-return]
+        return pd.DataFrame()  # type: ignore[no-any-return, unused-ignore]
 
     records: list[dict[str, str | None]] = [
         {
@@ -309,7 +309,7 @@ def get_season_calendar(
         for e in events
     ]
 
-    return pd.DataFrame(records)  # type: ignore[no-any-return]
+    return pd.DataFrame(records)  # type: ignore[no-any-return, unused-ignore]
 
 
 def _build_calendar_urls(
