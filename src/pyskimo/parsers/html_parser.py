@@ -54,16 +54,32 @@ class HTMLResultParser:
     COLUMN_MAPPINGS: ClassVar[dict[str, list[str]]] = {
         "rank": ["rank", "pos", "position", "#", "place", "pl", "rk"],
         "bib": ["bib", "no", "number", "nr", "dorsal"],
-        "name": ["name", "athlete", "competitor", "rider"],
+        "name": [
+            "name",
+            "athlete",
+            "athete",
+            "competitor",
+            "rider",
+        ],  # note: dataskimo has typo "athete"
         "first_name": ["first_name", "firstname", "first", "given_name"],
         "last_name": ["last_name", "lastname", "last", "surname", "family_name"],
-        "nationality": ["nationality", "nat", "country", "nation", "naz"],
+        "nationality": ["nationality", "nat", "nation", "country", "naz"],
         "category": ["category", "cat", "class", "age_group", "group"],
         "team": ["team", "club", "squad"],
-        "time": ["time", "finish", "result", "total", "finish_time", "total_time"],
+        "time": [
+            "time",
+            "total time",
+            "total_time",
+            "finish",
+            "result",
+            "total",
+            "finish_time",
+        ],
         "gap": ["gap", "diff", "behind", "delta", "+/-"],
         "status": ["status", "state"],
-        "points": ["points", "pts", "score"],
+        "points": ["points", "pts", "score", "wc pts", "wc_pts", "wrk pts", "wrk_pts"],
+        "year": ["year", "birth_year", "yob"],
+        "ismf_id": ["ismf id", "ismf_id", "id", "athlete_id"],
     }
 
     def __init__(
@@ -214,6 +230,29 @@ class HTMLResultParser:
                 return cells[idx].get_text(strip=True)
             return None
 
+        def get_cell_nationality(semantic_name: str) -> str | None:
+            """Extract nationality, handling both text and flag image formats."""
+            idx = column_map.get(semantic_name)
+            if idx is None or idx >= len(cells):
+                return None
+            cell = cells[idx]
+            text = cell.get_text(strip=True)
+            if text:
+                cleaned = text.strip("()")
+                if len(cleaned) in (2, 3) and cleaned.isalpha():
+                    return cleaned.upper()
+            img = cell.find("img")
+            if img and isinstance(img, Tag):
+                src = img.get("src", "")
+                alt = img.get("alt", "")
+                if alt and len(str(alt)) in (2, 3):
+                    return str(alt).upper()
+                if src:
+                    match = re.search(r"/([A-Z]{2,3})\.png", str(src), re.I)
+                    if match:
+                        return match.group(1).upper()
+            return None
+
         name_text = get_cell_text("name")
         first_name = get_cell_text("first_name")
         last_name = get_cell_text("last_name")
@@ -234,13 +273,25 @@ class HTMLResultParser:
         if not full_name.strip():
             return None
 
-        nationality = get_cell_text("nationality") or extracted_nat
+        nationality = get_cell_nationality("nationality") or extracted_nat
+
+        year_str = get_cell_text("year")
+        birth_year = None
+        if year_str:
+            with contextlib.suppress(ValueError):
+                birth_year = int(year_str)
+                if birth_year < 1900 or birth_year > 2020:
+                    birth_year = None
+
+        athlete_id = get_cell_text("ismf_id")
 
         athlete = Athlete(
+            athlete_id=athlete_id,
             full_name=full_name,
             first_name=first_name,
             last_name=last_name,
             nationality=nationality,
+            birth_year=birth_year,
             category=get_cell_text("category"),
             team=get_cell_text("team"),
         )

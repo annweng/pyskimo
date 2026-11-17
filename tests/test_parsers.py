@@ -348,3 +348,115 @@ class TestResultDataIntegrity:
             assert "time_seconds" in flat
 
             assert flat["status"] in ["finished", "dnf", "dns", "dsq", "lap", "otl", "pending"]
+
+
+class TestRealWorldFormats:
+    """Tests for real ISMF and DataSkimo HTML formats."""
+
+    ISMF_STYLE_HTML = """
+    <table>
+    <thead>
+    <tr><th>Rank</th><th>Nation</th><th>Athlete</th><th>Total time</th><th>Gap</th><th>Year</th><th>ISMF ID</th><th>WC Pts</th></tr>
+    </thead>
+    <tbody>
+    <tr bgcolor=#FFFFFF><td>1</td><td>(ESP)</td><td>CARDONA COLL Oriol</td><td>02:51.7</td><td>0</td><td>1994</td><td>613</td><td>100</td></tr>
+    <tr bgcolor=#DDDDDD><td>2</td><td>(SUI)</td><td>LIETHA Arno</td><td>02:56.7</td><td>+0:05.0</td><td>1998</td><td>1499</td><td>90</td></tr>
+    <tr bgcolor=#FFFFFF><td>3</td><td>(FRA)</td><td>ANSELMET Thibault</td><td>03:00.0</td><td>+0:08.3</td><td>1997</td><td>1541</td><td>81</td></tr>
+    </tbody>
+    </table>
+    """
+
+    DATASKIMO_STYLE_HTML = """
+    <table>
+    <thead>
+    <tr><th>Rank</th><th width="48" align="center">Nation</th><th>Athete</th><th>Total time</th><th>Year</th><th>ISMF ID</th><th>WC Pts</th></tr>
+    </thead>
+    <tbody>
+    <tr bgcolor=#FFFFFF><td>1</td><td width='48' align='center'><img src='flag/FRA.png' alt='FRA'></td><td><a href='athlete.php?id=2031'>HARROP&nbsp;Emily</a></td><td>03:12.5</td><td>1997</td><td>2031</td><td>100</td></tr>
+    <tr bgcolor=#DDDDDD><td>2</td><td width='48' align='center'><img src='flag/ITA.png' alt='ITA'></td><td><a href='athlete.php?id=1365'>MURADA&nbsp;Giulia</a></td><td>03:18.2</td><td>1998</td><td>1365</td><td>90</td></tr>
+    <tr bgcolor=#FFFFFF><td>-</td><td width='48' align='center'><img src='flag/ESP.png' alt='ESP'></td><td>GARCIA Ana</td><td>DNF</td><td>1999</td><td>1234</td><td>0</td></tr>
+    </tbody>
+    </table>
+    """
+
+    def test_ismf_format_basic_parsing(self) -> None:
+        """Test parsing ISMF-style results with parenthesized nationality."""
+        results = parse_results_html(self.ISMF_STYLE_HTML)
+
+        assert len(results) == 3
+
+        first = results[0]
+        assert first.rank == 1
+        assert first.athlete.nationality == "ESP"
+        assert "CARDONA" in first.athlete.full_name or "Oriol" in first.athlete.full_name
+        assert first.time_seconds is not None
+        assert first.time_seconds == pytest.approx(171.7, rel=0.01)
+
+    def test_ismf_format_birth_year(self) -> None:
+        """Test that birth year is extracted from ISMF format."""
+        results = parse_results_html(self.ISMF_STYLE_HTML)
+
+        first = results[0]
+        assert first.athlete.birth_year == 1994
+
+        second = results[1]
+        assert second.athlete.birth_year == 1998
+
+    def test_ismf_format_athlete_id(self) -> None:
+        """Test that ISMF ID is extracted."""
+        results = parse_results_html(self.ISMF_STYLE_HTML)
+
+        first = results[0]
+        assert first.athlete.athlete_id == "613"
+
+    def test_ismf_format_gap_parsing(self) -> None:
+        """Test gap time parsing in ISMF format."""
+        results = parse_results_html(self.ISMF_STYLE_HTML)
+
+        second = results[1]
+        assert second.gap_seconds is not None
+        assert second.gap_seconds == pytest.approx(5.0, rel=0.01)
+
+    def test_dataskimo_format_flag_nationality(self) -> None:
+        """Test extracting nationality from flag image in DataSkimo format."""
+        results = parse_results_html(self.DATASKIMO_STYLE_HTML)
+
+        assert len(results) == 3
+
+        first = results[0]
+        assert first.athlete.nationality == "FRA"
+
+        second = results[1]
+        assert second.athlete.nationality == "ITA"
+
+    def test_dataskimo_format_athlete_link(self) -> None:
+        """Test parsing athlete names from links."""
+        results = parse_results_html(self.DATASKIMO_STYLE_HTML)
+
+        first = results[0]
+        assert "HARROP" in first.athlete.full_name or "Emily" in first.athlete.full_name
+
+    def test_dataskimo_format_dnf_handling(self) -> None:
+        """Test DNF handling in DataSkimo format."""
+        results = parse_results_html(self.DATASKIMO_STYLE_HTML)
+
+        dnf_results = [r for r in results if r.status == ResultStatus.DNF]
+        assert len(dnf_results) == 1
+        assert dnf_results[0].athlete.nationality == "ESP"
+        assert dnf_results[0].time_seconds is None
+
+    def test_dataskimo_typo_athete_column(self) -> None:
+        """Test that the 'Athete' typo in DataSkimo headers is handled."""
+        results = parse_results_html(self.DATASKIMO_STYLE_HTML)
+        assert len(results) == 3
+        assert all(r.athlete.full_name for r in results)
+
+    def test_points_extraction(self) -> None:
+        """Test WC points extraction."""
+        results = parse_results_html(self.ISMF_STYLE_HTML)
+
+        first = results[0]
+        assert first.points == 100.0
+
+        second = results[1]
+        assert second.points == 90.0
