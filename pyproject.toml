@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyskimo"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python package for fetching, parsing, and analyzing Ski Mountaineering (Skimo) race results"
 readme = "README.md"
 license = "MIT"
